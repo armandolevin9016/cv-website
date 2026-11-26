@@ -21,6 +21,7 @@ Die Website-Dateien liegen im Stamm des Repositorys. In Cloudflare Pages ist das
 | `script.js` | Menü, Farbschema, aktueller Abschnitt |
 | `favicon.svg` | Seitensymbol |
 | `404.html` | Hinweis, wenn eine Adresse nicht existiert |
+| `functions/_middleware.js` | Passwortschutz für die ganze Seite (Cloudflare Pages Function) |
 | `_headers` | Sicherheits- und Cache-Header für Cloudflare Pages |
 | `assets/og.png` | Bild für Linkvorschauen |
 | `assets/lebenslauf-platzhalter.pdf` | Lebenslauf zum Herunterladen, mit denselben Beispieldaten |
@@ -63,6 +64,25 @@ Neues Projekt aus diesem GitHub-Repository, Production-Branch `main`.
 - `Cross-Origin-Opener-Policy: same-origin`
 
 HTML behält den Seiten-Standard von Cloudflare (`Cache-Control: public, max-age=0, must-revalidate`). CSS und JavaScript bleiben eine Stunde im Browser, `favicon.svg` und `assets/` einen Tag. Die Dateinamen sind nicht gehasht, deshalb ist der Cache kurz und eine neue Fassung nach dem Push bald sichtbar.
+
+## Passwortschutz
+
+Die ganze Seite liegt hinter einer Anmeldeseite, die nur ein Passwort verlangt. Das erledigt `functions/_middleware.js` als Cloudflare Pages Function, direkt bei Cloudflare und ohne Build.
+
+- Das Passwort steht **nicht** im Code und nicht im Repository, auch nicht als Hash. Es ist ein verschlüsseltes Secret mit dem Namen `SITE_PASSWORD` im Cloudflare-Projekt.
+- Ohne gültiges Passwort liefert die Seite nur die Anmeldeseite. Das gilt auch für CSS, Bilder und das PDF.
+- Nach der Anmeldung setzt die Seite ein Cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, 30 Tage gültig). Es enthält nur eine Signatur, nicht das Passwort.
+- Abmelden: `/?logout` aufrufen.
+- Alle Antworten haben `X-Robots-Tag: noindex`, die Anmeldeseite zusätzlich `<meta name="robots" content="noindex">`.
+- Fehlt das Secret, kommt niemand hinein (die Seite meldet «Die Anmeldung ist noch nicht eingerichtet»).
+
+**Passwort ändern:**
+
+1. Cloudflare-Dashboard öffnen: Workers & Pages, Projekt `armando-weder-cv`, Settings, Variables and Secrets.
+2. `SITE_PASSWORD` bei **Production** auf den neuen Wert setzen (Typ Secret).
+3. Neu veröffentlichen: unter Deployments beim letzten Eintrag «Retry deployment», oder einen neuen Commit auf `main` pushen. Erst danach gilt das neue Passwort. Alle bisherigen Anmeldungen werden dabei ungültig.
+
+Lokal testen: Datei `.dev.vars` mit der Zeile `SITE_PASSWORD=dein-testpasswort` anlegen (nicht committen) und `npx wrangler pages dev .` starten.
 
 ## Eigene Domain
 
